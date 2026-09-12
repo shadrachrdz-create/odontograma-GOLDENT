@@ -102,7 +102,19 @@ button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}.a
     grid-column: 1 / -1;
     grid-row: 2;
   }
-  /* Ocultar el nombre repetido */
+    .clinic-header .top-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+body,
+button,
+input,
+textarea,
+select {
+  font-family: Georgia, "Times New Roman", serif;
+}
+/* Ocultar el nombre repetido */
 .clinic-header .clinic-name {
   display: none;
 }
@@ -129,15 +141,4 @@ button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}.a
   }
 }
 
-  .clinic-header .top-actions {
-    grid-column: 2;
-    grid-row: 1;
-  }
-}
-body,
-button,
-input,
-textarea,
-select {
-  font-family: Georgia, "Times New Roman", serif;
-}
+
