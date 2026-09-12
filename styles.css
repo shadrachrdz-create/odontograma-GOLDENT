@@ -108,3 +108,10 @@ button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}.a
     grid-row: 1;
   }
 }
+body,
+button,
+input,
+textarea,
+select {
+  font-family: Georgia, "Times New Roman", serif;
+}
