@@ -102,6 +102,32 @@ button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}.a
     grid-column: 1 / -1;
     grid-row: 2;
   }
+  /* Ocultar el nombre repetido */
+.clinic-header .clinic-name {
+  display: none;
+}
+
+/* Ampliar el logo de la barra superior */
+.clinic-header .brand-logo-wrap {
+  width: 220px;
+  height: 150px;
+  max-width: 100%;
+}
+
+.clinic-header .brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Ajustar el tamaño en pantallas pequeñas */
+@media (max-width: 760px) {
+  .clinic-header .brand-logo-wrap {
+    width: 160px;
+    height: 115px;
+  }
+}
 
   .clinic-header .top-actions {
     grid-column: 2;
