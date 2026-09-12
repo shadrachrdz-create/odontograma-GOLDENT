@@ -129,3 +129,65 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPro
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 (async function init(){buildConditionGrid();setupSpeech();await loadPatients();const doctor=await loadSettings();$('doctorName').textContent=doctor;$('doctorInput').value=doctor;renderActivePatient();renderOdontogram();})();
+// GOLDENT v2.1: eliminar al paciente seleccionado.
+(() => {
+  const edit = $('editPatientBtn');
+  if (!edit || $('deletePatientBtn')) return;
+
+  const button = document.createElement('button');
+  button.id = 'deletePatientBtn';
+  button.type = 'button';
+  button.className = 'btn btn-soft';
+  button.textContent = 'Eliminar paciente';
+  button.style.color = '#b42318';
+  edit.after(button);
+
+  button.onclick = async () => {
+    if (button.disabled) return;
+    const patient = getPatient();
+    if (!patient) return toast('Selecciona un paciente primero.');
+
+    const accepted = window.confirm(
+      '¿Eliminar a ' + patient.name + '?\n\n' +
+      'Se borrarán su ficha, odontograma, periodontograma e historial ' +
+      'de este navegador.\nEsta acción no se puede deshacer desde la app.'
+    );
+    if (!accepted) return;
+
+    button.disabled = true;
+    let db;
+    try {
+      db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('patients', 'readwrite');
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+        tx.objectStore('patients').delete(patient.id);
+      });
+    } catch {
+      toast('No se pudo eliminar. Intenta nuevamente.');
+      return;
+    } finally {
+      if (db) db.close();
+      button.disabled = false;
+    }
+
+    dbCache = dbCache.filter(p => p.id !== patient.id);
+    if (state.activePatientId === patient.id) {
+      state.activePatientId = null;
+      state.selectedTooth = null;
+      state.selectedSurfaces.clear();
+      $('patientForm').reset();
+      $('toothNote').value = '';
+      $('clearDictationBtn').click();
+    }
+    renderPatients();
+    renderOdontogram();
+    renderPerio();
+    renderExploration();
+    renderHistory();
+    navigate('patients');
+    toast('Paciente eliminado de este navegador.');
+  };
+})();
