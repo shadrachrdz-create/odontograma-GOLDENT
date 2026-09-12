@@ -14,16 +14,54 @@
 </head>
 <body>
 <div id="app" class="app-shell">
-  <header class="topbar">
-    <button class="brand" data-nav="home" aria-label="Ir al inicio">
-      <span class="brand-logo-wrap"><img src="./goldent-logo.png" alt="GOLDENT Salud Oral y Bienestar" class="brand-logo" /></span>
-    </button>
-    <div class="top-actions">
-      <span class="clinic-pill">Expediente odontológico</span>
-      <button id="installBtn" class="btn btn-cream" hidden>Instalar</button>
-      <button class="icon-btn top" data-nav="more" aria-label="Más opciones">•••</button>
+  <header class="topbar clinic-header">
+  <button class="brand" type="button"
+          data-nav="home" aria-label="Ir al inicio">
+    <span class="brand-logo-wrap">
+      <img src="./goldent-logo.png"
+           alt="GOLDENT Salud y Bienestar Oral"
+           class="brand-logo" />
+    </span>
+  </button>
+
+  <div class="clinic-info">
+    <strong class="clinic-name">
+      GOLDENT Salud y Bienestar Oral
+    </strong>
+
+    <p class="clinic-doctor">
+      C.D. Yahaira Josselyne Añorve Guillen
+    </p>
+    <p>Odontología general</p>
+
+    <div class="clinic-contact">
+      <a href="tel:+529621705729">
+        Tel. 962 170 57 29
+      </a>
+      <a href="https://www.instagram.com/goldentmx/"
+         target="_blank" rel="noopener noreferrer">
+        Instagram: @Goldentmx
+      </a>
     </div>
-  </header>
+
+    <p class="clinic-address">
+      8va. Calle Poniente #25 B, entre 6ta y 8va. Sur,
+      Tapachula, Chiapas.
+    </p>
+  </div>
+
+  <div class="top-actions">
+    <span class="clinic-pill">Expediente odontológico</span>
+    <button id="installBtn" type="button"
+            class="btn btn-cream" hidden>
+      Instalar
+    </button>
+    <button class="icon-btn top" type="button"
+            data-nav="more" aria-label="Más opciones">
+      •••
+    </button>
+  </div>
+</header>
 
   <main class="content">
     <section class="screen active" id="screen-home" data-screen="home">
