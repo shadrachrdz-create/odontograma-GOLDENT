@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#315f4b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="GOLDENT" />
+  <title>GOLDENT · Odontograma Digital</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./goldent-logo.png" type="image/png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div id="app" class="app-shell">
+  <header class="topbar">
+    <button class="brand" data-nav="home" aria-label="Ir al inicio">
+      <span class="brand-logo-wrap"><img src="./goldent-logo.png" alt="GOLDENT Salud Oral y Bienestar" class="brand-logo" /></span>
+    </button>
+    <div class="top-actions">
+      <span class="clinic-pill">Expediente odontológico</span>
+      <button id="installBtn" class="btn btn-cream" hidden>Instalar</button>
+      <button class="icon-btn top" data-nav="more" aria-label="Más opciones">•••</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="screen active" id="screen-home" data-screen="home">
+      <div class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Odontología digital</p>
+          <h1>Buenos días, <span id="doctorName">Dr. Shadrach</span></h1>
+          <p>Odontograma, periodontograma, exploración y seguimiento en un solo expediente.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" id="newPatientBtn">＋ Nuevo paciente</button>
+            <button class="btn btn-outline" data-nav="patients">Buscar paciente</button>
+          </div>
+        </div>
+        <div class="hero-brand"><img src="./goldent-logo.png" alt="GOLDENT" /></div>
+      </div>
+
+      <div class="quick-grid">
+        <button class="quick-card primary" data-nav="chart"><span>🦷</span><b>Odontograma</b><small>FDI · temporal y permanente</small></button>
+        <button class="quick-card green" data-nav="perio"><span>⌁</span><b>Periodontograma</b><small>6 sitios por pieza + gráfica</small></button>
+        <button class="quick-card" data-nav="exploration"><span>✎</span><b>Exploración</b><small>Diagnóstico y tratamiento</small></button>
+        <button class="quick-card" data-nav="reports"><span>▥</span><b>Reportes</b><small>Impresión y respaldo</small></button>
+      </div>
+
+      <div class="section-heading"><h2>Pacientes recientes</h2><button class="link-btn" data-nav="patients">Ver todos</button></div>
+      <div id="recentPatients" class="patient-list"></div>
+    </section>
+
+    <section class="screen" id="screen-patients" data-screen="patients">
+      <div class="section-heading">
+        <div><p class="eyebrow">Expedientes</p><h1>Pacientes</h1></div>
+        <button class="btn btn-primary" id="newPatientBtn2">＋ Nuevo</button>
+      </div>
+      <label class="search-box"><span>⌕</span><input id="patientSearch" placeholder="Buscar por nombre o expediente" /></label>
+      <div id="allPatients" class="patient-list"></div>
+    </section>
+
+    <section class="screen" id="screen-chart" data-screen="chart">
+      <div class="patient-banner">
+        <div><p class="eyebrow">Paciente activo</p><h2 id="activePatientName">Sin paciente seleccionado</h2><p id="activePatientMeta">Crea o selecciona un paciente para comenzar.</p></div>
+        <button class="btn btn-soft" id="editPatientBtn">Editar</button>
+      </div>
+      <div class="clinical-switch">
+        <button class="active" data-nav="chart">Odontograma</button>
+        <button data-nav="perio">Periodontograma</button>
+        <button data-nav="exploration">Exploración</button>
+      </div>
+
+      <div class="segmented" role="tablist">
+        <button class="seg active" data-dentition="permanent">Dentición permanente · FDI</button>
+        <button class="seg" data-dentition="primary">Dentición temporal · FDI</button>
+      </div>
+
+      <div class="chart-layout">
+        <div class="odontogram-card">
+          <div class="arch-head"><h3>Arcada superior</h3><span>Derecha → Izquierda</span></div>
+          <div id="upperArch" class="tooth-row"></div>
+          <div class="midline"><span>línea media</span></div>
+          <div class="arch-head lower"><h3>Arcada inferior</h3><span>Derecha → Izquierda</span></div>
+          <div id="lowerArch" class="tooth-row"></div>
+
+          <div class="legend-strip">
+            <span><i class="dot caries"></i>Caries</span><span><i class="dot restoration"></i>Obturación</span>
+            <span><i class="dot crown"></i>Corona</span><span><i class="dot endo"></i>Endodoncia</span>
+            <button class="link-btn" id="showLegendBtn">Ver leyenda</button>
+          </div>
+          <button class="btn btn-gold full" data-nav="dictation">🎙 Dictado por voz</button>
+        </div>
+
+        <aside class="tooth-panel" id="toothPanel">
+          <div class="empty-tooth-state" id="emptyToothState">
+            <div class="big-tooth">🦷</div><h3>Selecciona una pieza</h3><p>Toca un diente para registrar superficies, hallazgos y notas.</p>
+          </div>
+          <div id="toothEditor" hidden>
+            <div class="tooth-title-row">
+              <button class="icon-btn" id="prevToothBtn">‹</button>
+              <div><p class="eyebrow">Pieza seleccionada</p><h2>Pieza <span id="selectedToothNumber">16</span></h2><p id="selectedToothLabel"></p></div>
+              <button class="icon-btn" id="nextToothBtn">›</button>
+            </div>
+
+            <div class="surface-map-wrap">
+              <svg id="surfaceDiagram" class="surface-diagram-svg" viewBox="0 0 300 240" role="group" aria-label="Superficies dentales">
+                <path class="surface-zone surface-v" data-surface="v" tabindex="0" role="button" aria-label="Vestibular" d="M92 36 Q150 12 208 36 L190 92 Q150 76 110 92 Z"/>
+                <path class="surface-zone surface-m" data-surface="m" tabindex="0" role="button" aria-label="Mesial" d="M92 36 L110 92 L110 148 L92 204 Q54 168 54 120 Q54 72 92 36 Z"/>
+                <path class="surface-zone surface-o" data-surface="o" tabindex="0" role="button" aria-label="Oclusal o incisal" d="M110 92 Q150 76 190 92 L190 148 Q150 164 110 148 Z"/>
+                <path class="surface-zone surface-d" data-surface="d" tabindex="0" role="button" aria-label="Distal" d="M208 36 Q246 72 246 120 Q246 168 208 204 L190 148 L190 92 Z"/>
+                <path class="surface-zone surface-l" data-surface="l" tabindex="0" role="button" aria-label="Palatino o lingual" d="M110 148 Q150 164 190 148 L208 204 Q150 228 92 204 Z"/>
+                <text x="150" y="54" text-anchor="middle">V</text><text x="77" y="124" text-anchor="middle">M</text>
+                <text x="150" y="125" text-anchor="middle">O/I</text><text x="223" y="124" text-anchor="middle">D</text><text x="150" y="204" text-anchor="middle">L/P</text>
+              </svg>
+            </div>
+
+            <h3 class="panel-subtitle">Tipo de hallazgo</h3>
+            <div id="conditionGrid" class="condition-grid"></div>
+            <label class="field"><span>Observaciones de la pieza</span><textarea id="toothNote" rows="2" placeholder="Ej. Caries ocluso-mesial con cavitación"></textarea></label>
+            <div class="button-row"><button class="btn btn-soft" id="clearToothBtn">Limpiar pieza</button><button class="btn btn-primary" id="saveToothBtn">Guardar hallazgo</button></div>
+            <button class="btn btn-outline full subtle-top" id="openExplorationForTooth">Abrir exploración de esta pieza →</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-perio" data-screen="perio">
+      <div class="patient-banner compact">
+        <div><p class="eyebrow">Paciente activo</p><h2 id="perioPatientName">Sin paciente seleccionado</h2><p>Periodontograma · dentición permanente · 6 sitios por pieza</p></div>
+      </div>
+      <div class="clinical-switch"><button data-nav="chart">Odontograma</button><button class="active" data-nav="perio">Periodontograma</button><button data-nav="exploration">Exploración</button></div>
+
+      <div class="perio-layout">
+        <div class="perio-main card-surface">
+          <div class="section-heading mini"><div><p class="eyebrow">Perfil periodontal</p><h2>Profundidad de sondaje</h2></div><span class="unit-chip">mm</span></div>
+          <p class="helper">La gráfica usa 0–12 mm. Verde 1–3, ámbar 4–5 y rojo ≥6 como ayuda visual.</p>
+          <div id="perioCharts" class="perio-charts"></div>
+          <div class="section-heading mini"><h3>Selecciona una pieza</h3><span id="perioCompletion" class="unit-chip">0 / 32</span></div>
+          <div id="perioTeeth" class="perio-teeth"></div>
+        </div>
+
+        <aside class="perio-editor card-surface">
+          <div class="tooth-title-row">
+            <button class="icon-btn" id="prevPerioTooth">‹</button>
+            <div><p class="eyebrow">Sondaje periodontal</p><h2>Pieza <span id="perioSelectedTooth">16</span></h2><p id="perioToothLabel"></p></div>
+            <button class="icon-btn" id="nextPerioTooth">›</button>
+          </div>
+          <div class="perio-site-head"><span>Sitio</span><span>PS</span><span>Sangrado</span><span>Supuración</span></div>
+          <div id="perioSiteGrid" class="perio-site-grid"></div>
+          <div class="field-grid perio-meta">
+            <label class="field"><span>Movilidad</span><select id="perioMobility"><option value="0">0</option><option value="1">I</option><option value="2">II</option><option value="3">III</option></select></label>
+            <label class="field"><span>Furcación</span><select id="perioFurcation"><option value="0">0 / No aplica</option><option value="1">I</option><option value="2">II</option><option value="3">III</option></select></label>
+          </div>
+          <label class="field"><span>Observaciones periodontales</span><textarea id="perioNote" rows="2" placeholder="Recesión, cálculo, inflamación, etc."></textarea></label>
+          <div class="button-row"><button class="btn btn-soft" id="clearPerioTooth">Limpiar</button><button class="btn btn-primary" id="savePerioTooth">Guardar y siguiente</button></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-exploration" data-screen="exploration">
+      <div class="patient-banner compact"><div><p class="eyebrow">Paciente activo</p><h2 id="explorationPatientName">Sin paciente seleccionado</h2><p>Exploración, diagnóstico y plan por pieza</p></div></div>
+      <div class="clinical-switch"><button data-nav="chart">Odontograma</button><button data-nav="perio">Periodontograma</button><button class="active" data-nav="exploration">Exploración</button></div>
+      <div class="segmented exploration-dentition"><button class="seg active" data-exploration-dentition="permanent">Permanente · FDI</button><button class="seg" data-exploration-dentition="primary">Temporal · FDI</button></div>
+
+      <div class="exploration-layout">
+        <div class="card-surface exploration-index">
+          <div class="section-heading mini"><div><p class="eyebrow">Registro por pieza</p><h2>Exploración</h2></div><span id="explorationProgress" class="unit-chip">0 registros</span></div>
+          <div id="explorationTeeth" class="exploration-teeth"></div>
+        </div>
+        <div class="card-surface exploration-editor">
+          <div class="tooth-title-row">
+            <button class="icon-btn" id="prevExplorationTooth">‹</button>
+            <div><p class="eyebrow">Pieza seleccionada</p><h2>Pieza <span id="explorationSelectedTooth">16</span></h2><p id="explorationToothLabel"></p></div>
+            <button class="icon-btn" id="nextExplorationTooth">›</button>
+          </div>
+          <label class="field"><span>Exploración / hallazgos</span><textarea id="explorationFindings" rows="3" placeholder="Hallazgos clínicos y pruebas realizadas"></textarea></label>
+          <label class="field"><span>Diagnóstico</span><textarea id="explorationDiagnosis" rows="3" placeholder="Diagnóstico o impresión diagnóstica"></textarea></label>
+          <label class="field emphasized"><span>Manejo / tratamiento sugerido</span><textarea id="explorationSuggested" rows="3" placeholder="Ej. Restauración adhesiva, endodoncia, vigilancia, referir..."></textarea></label>
+          <div class="treatment-chips" id="treatmentChips">
+            <button type="button">Restauración</button><button type="button">Endodoncia</button><button type="button">Corona</button><button type="button">Extracción</button><button type="button">Sellador</button><button type="button">Profilaxis</button><button type="button">Raspado y alisado</button><button type="button">Vigilancia</button><button type="button">Referir</button>
+          </div>
+          <label class="field"><span>Tratamiento realizado</span><textarea id="explorationPerformed" rows="3" placeholder="Se completa cuando el procedimiento se realice"></textarea></label>
+          <label class="field"><span>Notas / seguimiento</span><textarea id="explorationNotes" rows="2" placeholder="Pendientes, consentimiento, reevaluación, etc."></textarea></label>
+          <div class="button-row"><button class="btn btn-soft" id="clearExploration">Limpiar</button><button class="btn btn-primary" id="saveExploration">Guardar exploración</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-dictation" data-screen="dictation">
+      <div class="dictation-card">
+        <p class="eyebrow gold">Registro rápido</p><h1>Dictado por voz</h1>
+        <p>Describe los hallazgos de forma natural. Revisaremos el resultado antes de aplicarlo.</p>
+        <button id="micBtn" class="mic-button" aria-label="Iniciar dictado"><span>🎙</span></button><strong id="micState">Toca para dictar</strong>
+        <textarea id="dictationText" rows="5" placeholder="Ej. Pieza 16 caries ocluso-mesial, 26 obturación oclusal, 36 ausente, 46 endodoncia."></textarea>
+        <div class="button-row center"><button class="btn btn-soft" id="clearDictationBtn">Limpiar</button><button class="btn btn-primary" id="parseDictationBtn">Interpretar</button></div>
+        <div id="dictationPreview" class="dictation-preview"></div><button id="applyDictationBtn" class="btn btn-gold full" hidden>Aplicar al odontograma</button>
+        <p class="microcopy">En iPhone puedes usar el micrófono del teclado si el reconocimiento directo del navegador no está disponible.</p>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-history" data-screen="history"><div class="section-heading"><div><p class="eyebrow">Seguimiento</p><h1>Historial clínico</h1></div></div><div id="historyList" class="history-list"></div></section>
+
+    <section class="screen" id="screen-reports" data-screen="reports">
+      <div class="section-heading"><div><p class="eyebrow">Salida</p><h1>Reportes</h1></div></div>
+      <div class="report-grid">
+        <button class="report-card" id="printReportBtn"><span>PDF</span><div><b>Vista para imprimir / PDF</b><small>Odontograma y resumen clínico</small></div><i>›</i></button>
+        <button class="report-card" id="exportJsonBtn"><span>JSON</span><div><b>Respaldo del expediente</b><small>Archivo portable para importar después</small></div><i>›</i></button>
+        <label class="report-card file-label"><span>↑</span><div><b>Importar respaldo</b><small>Recupera un expediente JSON</small></div><i>›</i><input id="importJsonInput" type="file" accept="application/json" hidden /></label>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-more" data-screen="more">
+      <div class="section-heading"><div><p class="eyebrow">GOLDENT</p><h1>Configuración</h1></div></div>
+      <div class="settings-card"><label class="field"><span>Nombre del profesional</span><input id="doctorInput" value="Dr. Shadrach" /></label><button class="btn btn-primary" id="saveSettingsBtn">Guardar preferencias</button><hr/><p><strong>Versión:</strong> 2.1 clínica</p><p class="microcopy">Los datos se almacenan localmente en este dispositivo. Antes de uso clínico real multiusuario deben añadirse autenticación, cifrado, respaldos y controles de acceso.</p></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegación principal">
+    <button data-nav="home" class="active"><span>⌂</span><small>Inicio</small></button>
+    <button data-nav="patients"><span>♙</span><small>Pacientes</small></button>
+    <button data-nav="chart"><span>🦷</span><small>Clínica</small></button>
+    <button data-nav="dictation"><span>🎙</span><small>Dictado</small></button>
+    <button data-nav="reports"><span>▥</span><small>Reportes</small></button>
+  </nav>
+</div>
+
+<dialog id="patientDialog" class="modal">
+  <form method="dialog" id="patientForm">
+    <div class="modal-head"><div><p class="eyebrow">Expediente</p><h2 id="patientDialogTitle">Nuevo paciente</h2></div><button type="button" id="closePatientDialogBtn" class="icon-btn" aria-label="Cerrar">×</button></div>
+    <input type="hidden" id="patientInternalId" />
+    <label class="field"><span>Nombre completo</span><input id="patientNameInput" required /></label>
+    <div class="field-grid"><label class="field"><span>Expediente</span><input id="patientRecordInput" placeholder="000124" /></label><label class="field"><span>Fecha de nacimiento</span><input id="patientBirthInput" type="date" /></label></div>
+    <div class="field-grid"><label class="field"><span>Sexo</span><select id="patientSexInput"><option value="">No especificado</option><option>Femenino</option><option>Masculino</option><option>Otro</option></select></label><label class="field"><span>Teléfono</span><input id="patientPhoneInput" inputmode="tel" /></label></div>
+    <div class="button-row"><button type="button" id="cancelPatientBtn" class="btn btn-soft">Cancelar</button><button type="submit" id="savePatientBtn" class="btn btn-primary">Guardar paciente</button></div>
+  </form>
+</dialog>
+
+<dialog id="legendDialog" class="modal small-modal"><form method="dialog"><div class="modal-head"><h2>Leyenda clínica</h2><button value="cancel" class="icon-btn">×</button></div><div id="fullLegend" class="legend-grid"></div></form></dialog>
+
+<template id="toothTemplate">
+  <button class="tooth-item" type="button"><span class="tooth-number"></span><svg class="tooth-svg" viewBox="0 0 70 92" aria-hidden="true"></svg><span class="tooth-badges"></span></button>
+</template>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="./app.js"></script>
+</body>
+</html>
