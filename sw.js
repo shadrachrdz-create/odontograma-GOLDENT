@@ -1,4 +1,4 @@
-const CACHE = 'goldent-odontograma-v2-2-r7';
+const CACHE = 'goldent-odontograma-v2-2-r8';
 const ROOT = new URL('./', self.location.href);
 const FILES = [
   './', './index.html', './styles.css', './app.js', './speech-fix.js',
@@ -19,17 +19,25 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
     await Promise.all(
-      names.filter(name =>
-        name.startsWith('goldent-odontograma-') && name !== CACHE
-      ).map(name => caches.delete(name))
+      names
+        .filter(name => name.startsWith('goldent-odontograma-') && name !== CACHE)
+        .map(name => caches.delete(name))
     );
+
     await self.clients.claim();
+
+    // Reload open GOLDENT windows once so the new microphone layer takes effect immediately.
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    await Promise.all(clients.map(client => {
+      try { return client.navigate(client.url); } catch { return null; }
+    }));
   })());
 });
 
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
+
   if (
     request.method !== 'GET' ||
     url.origin !== ROOT.origin ||
@@ -39,20 +47,22 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
 
-    // app.js is served together with the small microphone stability patch.
-    // This lets us fix voice behavior without changing the approved UI.
+    // app.js is served together with the voice layer. The UI remains unchanged.
     if (url.pathname.endsWith('/app.js')) {
       try {
         const [appResponse, patchResponse] = await Promise.all([
           fetch(request, { cache: 'no-store' }),
           fetch(new URL('./speech-fix.js', ROOT).href, { cache: 'no-store' })
         ]);
-        if (!appResponse.ok || !patchResponse.ok) throw new Error('Voice patch unavailable');
+
+        if (!appResponse.ok || !patchResponse.ok) throw new Error('Voice layer unavailable');
+
         const combined = `${await appResponse.text()}\n\n${await patchResponse.text()}\n`;
         const response = new Response(combined, {
           status: 200,
           headers: { 'Content-Type': 'application/javascript; charset=utf-8' }
         });
+
         await cache.put(request, response.clone()).catch(() => {});
         return response;
       } catch {
@@ -69,10 +79,12 @@ self.addEventListener('fetch', event => {
     } catch {
       const saved = await cache.match(request);
       if (saved) return saved;
+
       if (request.mode === 'navigate') {
         const home = await cache.match(new URL('index.html', ROOT).href);
         if (home) return home;
       }
+
       return Response.error();
     }
   })());
