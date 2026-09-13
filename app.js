@@ -109,17 +109,306 @@ $('prevExplorationTooth').onclick=()=>nextExploration(-1);$('nextExplorationToot
 $('saveExploration').onclick=async()=>{const p=getPatient();if(!p){toast('Selecciona un paciente.');navigate('patients');return}ensurePatientData(p);p.exploration[state.explorationDentition][state.explorationTooth]={findings:$('explorationFindings').value.trim(),diagnosis:$('explorationDiagnosis').value.trim(),suggested:$('explorationSuggested').value.trim(),performed:$('explorationPerformed').value.trim(),notes:$('explorationNotes').value.trim(),updatedAt:new Date().toISOString()};addHistory(p,{dentition:state.explorationDentition,tooth:state.explorationTooth,summary:'Exploración/diagnóstico/tratamiento actualizado'});await savePatientRecord(p);renderExploration();toast('Exploración guardada')};
 $('clearExploration').onclick=async()=>{const p=getPatient();if(!p)return;delete p.exploration[state.explorationDentition][state.explorationTooth];addHistory(p,{dentition:state.explorationDentition,tooth:state.explorationTooth,summary:'Exploración de pieza limpiada'});await savePatientRecord(p);renderExploration();toast('Exploración limpiada')};
 $$('#treatmentChips button').forEach(b=>b.onclick=()=>{const ta=$('explorationSuggested'),v=b.textContent.trim();if(!ta.value.toLowerCase().includes(v.toLowerCase()))ta.value=(ta.value.trim()?ta.value.trim()+'; ':'')+v});
+/* Dictado odontograma v2.2 — reconocimiento odontológico mejorado */
+const voiceDigitWords={
+  uno:'1',un:'1',una:'1',dos:'2',tres:'3',cuatro:'4',cinco:'5',
+  seis:'6',siete:'7',ocho:'8',nueve:'9'
+};
+const voiceOnes=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve'];
 
-/* Dictado odontograma */
-function normalize(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/([0-9])\s*y\s*([0-9])/g,'$1, $2')}
-function parseSegment(segment){const t=normalize(segment),toothMatch=t.match(/(?:pieza|diente)?\s*(\d{2})/);if(!toothMatch)return{ok:false,raw:segment,error:'No identifiqué la pieza'};const tooth=toothMatch[1],valid=allTeeth().includes(tooth);if(!valid)return{ok:false,raw:segment,error:`La pieza ${tooth} no corresponde a esta dentición`};const map=[['caries','caries'],['obturacion','restoration'],['restauracion','restoration'],['resina','restoration'],['amalgama','restoration'],['corona','crown'],['endodoncia','endo'],['conductos','endo'],['implante','implant'],['sellador','sealant'],['extraccion','extraction'],['extraer','extraction'],['fractura','fracture'],['ausente','missing'],['extraido','missing'],['extraida','missing'],['sano','healthy']],pair=map.find(([w])=>t.includes(w));if(!pair)return{ok:false,raw:segment,error:`No identifiqué el hallazgo de la pieza ${tooth}`};const smap=[['mesial','m'],['mesio','m'],['distal','d'],['disto','d'],['vestibular','v'],['vestibulo','v'],['bucal','v'],['palatino','l'],['palatina','l'],['lingual','l'],['oclusal','o'],['ocluso','o'],['incisal','o']],surfaces=[];smap.forEach(([w,k])=>{if(t.includes(w)&&!surfaces.includes(k))surfaces.push(k)});return{ok:true,tooth,condition:pair[1],surfaces,raw:segment}}
-function parseDictation(text){const cleaned=text.replace(/\n/g,' ').trim();if(!cleaned)return[];const marked=cleaned.replace(/(?:pieza|diente)\s*(\d{2})/gi,'§pieza $1').replace(/([,.;]\s*)(?=\d{2}\b)/g,'$1§pieza ');const segments=marked.split('§').map(s=>s.replace(/^[,.;\s]+/,'').trim()).filter(Boolean);return segments.map(parseSegment)}
-$('parseDictationBtn').onclick=()=>{state.dictationParsed=parseDictation($('dictationText').value);renderDictationPreview()};
-function renderDictationPreview(){const box=$('dictationPreview');box.innerHTML='';if(!state.dictationParsed.length){box.innerHTML='<div class="dictation-item error">No encontré comandos clínicos. Prueba: “Pieza 16 caries ocluso-mesial”.</div>';$('applyDictationBtn').hidden=true;return}state.dictationParsed.forEach(r=>{const d=document.createElement('div');d.className='dictation-item'+(r.ok?'':' error');d.textContent=r.ok?`✓ Pieza ${r.tooth} · ${conditionDefs[r.condition].label}${r.surfaces.length?' · '+r.surfaces.map(s=>surfaceLabels[s]).join(' + '):''}`:`⚠ ${r.error}`;box.appendChild(d)});$('applyDictationBtn').hidden=!state.dictationParsed.some(x=>x.ok)}
-$('applyDictationBtn').onclick=async()=>{const p=getPatient();if(!p){toast('Selecciona un paciente antes de aplicar el dictado.');navigate('patients');return}ensurePatientData(p);const bucket=p.chart[state.dentition];state.dictationParsed.filter(r=>r.ok).forEach(r=>{if(r.condition==='healthy')bucket[r.tooth]={records:[{id:uid(),condition:'healthy',surfaces:[],note:'',createdAt:new Date().toISOString(),source:'dictation'}]};else{const existing=bucket[r.tooth]?.records||[];bucket[r.tooth]={records:[...existing.filter(x=>x.condition!=='healthy'),{id:uid(),condition:r.condition,surfaces:r.surfaces,note:'',createdAt:new Date().toISOString(),source:'dictation'}]}}addHistory(p,{dentition:state.dentition,tooth:r.tooth,summary:`Dictado: ${conditionDefs[r.condition].label}${r.surfaces.length?' · '+r.surfaces.map(s=>surfaceLabels[s]).join(', '):''}`})});await savePatientRecord(p);toast('Dictado aplicado');navigate('chart')};
-$('clearDictationBtn').onclick=()=>{$('dictationText').value='';state.dictationParsed=[];$('dictationPreview').innerHTML='';$('applyDictationBtn').hidden=true};
-function setupSpeech(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('micState').textContent='Usa el dictado del teclado';$('micBtn').onclick=()=>{$('dictationText').focus();toast('En este navegador usa el micrófono del teclado.')};return}const rec=new SR();rec.lang='es-MX';rec.continuous=false;rec.interimResults=false;rec.onstart=()=>{$('micBtn').classList.add('listening');$('micState').textContent='Escuchando…'};rec.onend=()=>{$('micBtn').classList.remove('listening');$('micState').textContent='Toca para dictar'};rec.onerror=e=>toast(`Dictado: ${e.error}`);rec.onresult=e=>{$('dictationText').value=e.results[0][0].transcript;$('micState').textContent='Texto reconocido';state.dictationParsed=parseDictation($('dictationText').value);renderDictationPreview()};$('micBtn').onclick=()=>rec.start()}
+function spanishNumber(n){
+  const special={10:'diez',11:'once',12:'doce',13:'trece',14:'catorce',15:'quince',16:'dieciseis',17:'diecisiete',18:'dieciocho',19:'diecinueve',20:'veinte'};
+  if(special[n])return special[n];
+  if(n>20&&n<30)return 'veinti'+voiceOnes[n-20];
+  const tens={3:'treinta',4:'cuarenta',5:'cincuenta',6:'sesenta',7:'setenta',8:'ochenta'};
+  const t=Math.floor(n/10),u=n%10;
+  return tens[t]?(u?`${tens[t]} y ${voiceOnes[u]}`:tens[t]):String(n);
+}
 
+function normalize(s=''){
+  return String(s)
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[–—-]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function regexEscape(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+
+function canonicalizeToothNumbers(text){
+  let t=normalize(text);
+  const valid=[...new Set([...permanent.upper,...permanent.lower,...primary.upper,...primary.lower])];
+
+  // “pieza dieciséis”, “diente cuarenta y seis”, etc.
+  valid
+    .map(n=>[n,spanishNumber(Number(n))])
+    .sort((a,b)=>b[1].length-a[1].length)
+    .forEach(([n,words])=>{
+      const re=new RegExp(`\\b(pieza|diente)\\s+${regexEscape(words)}\\b`,'g');
+      t=t.replace(re,`$1 ${n}`);
+    });
+
+  // “pieza uno seis” / “pieza uno y seis”.
+  const words=Object.keys(voiceDigitWords).join('|');
+  const pairWords=new RegExp(`\\b(pieza|diente)\\s+(${words})\\s+(?:y\\s+)?(${words})\\b`,'g');
+  t=t.replace(pairWords,(_,label,a,b)=>`${label} ${voiceDigitWords[a]}${voiceDigitWords[b]}`);
+
+  // “pieza 1 6”, “pieza 1 y 6”, “pieza 1, 6”.
+  t=t.replace(/\b(pieza|diente)\s*([1-8])\s*(?:,|y)?\s*([1-8])\b/g,'$1 $2$3');
+  return t;
+}
+
+function includesAny(text,aliases){return aliases.some(x=>text.includes(x))}
+
+const dentalConditionAliases=[
+  {condition:'caries',aliases:['caries','carie','cariado','cariada','lesion cariosa','cavidad']},
+  {condition:'restoration',aliases:['obturacion','restauracion','restaurado','restaurada','resina','amalgama','empaste']},
+  {condition:'crown',aliases:['corona','corona dental']},
+  {condition:'endo',aliases:['endodoncia','endodontico','endodontica','tratamiento de conductos','conductos']},
+  {condition:'implant',aliases:['implante','implantado','implantada']},
+  {condition:'sealant',aliases:['sellador','sellante','sellado de fosetas']},
+  {condition:'extraction',aliases:['extraccion indicada','extraccion','extraer','exodoncia','indicado para extraccion']},
+  {condition:'fracture',aliases:['fractura','fracturado','fracturada','fisura']},
+  {condition:'missing',aliases:['ausente','perdido','perdida','extraido','extraida','extraccion previa','sin pieza']},
+  {condition:'healthy',aliases:['sano','sana','saludable','sin hallazgos','integro','integra']}
+];
+
+const dentalSurfaceAliases={
+  m:['mesial','mesio','mesi'],
+  d:['distal','disto'],
+  v:['vestibular','vestibulo','bucal','labial'],
+  l:['palatino','palatina','palatal','lingual'],
+  o:['oclusal','ocluso','oclusa','oclusar','incisal']
+};
+
+function extractTreatment(segment){
+  const t=normalize(segment);
+  const m=t.match(/\b(?:tratamiento|manejo|plan|tratamiento sugerido|manejo sugerido)\b\s*(?:sugerido|sugerida|es|con|seria|:) *(.+)$/);
+  if(!m)return'';
+  let value=m[1].trim().replace(/^(?:de|una|un)\s+/,'');
+  if(!value)return'';
+  return value.charAt(0).toUpperCase()+value.slice(1);
+}
+
+function parseSegment(segment){
+  const t=canonicalizeToothNumbers(segment);
+  const toothMatch=t.match(/(?:pieza|diente)\s*(\d{2})\b/)||t.match(/\b(\d{2})\b/);
+  if(!toothMatch)return{ok:false,raw:segment,error:'No identifiqué la pieza'};
+
+  const tooth=toothMatch[1];
+  if(!allTeeth().includes(tooth)){
+    return{ok:false,raw:segment,error:`La pieza ${tooth} no corresponde a esta dentición`};
+  }
+
+  const hit=dentalConditionAliases.find(x=>includesAny(t,x.aliases));
+  if(!hit)return{ok:false,raw:segment,error:`No identifiqué el hallazgo de la pieza ${tooth}`};
+
+  const surfaces=[];
+  Object.entries(dentalSurfaceAliases).forEach(([surface,aliases])=>{
+    if(includesAny(t,aliases)&&!surfaces.includes(surface))surfaces.push(surface);
+  });
+
+  // Abreviaturas habladas o escritas frecuentes.
+  if(/\bmod\b|mesio\s+ocluso?\s+distal/.test(t))['m','o','d'].forEach(s=>!surfaces.includes(s)&&surfaces.push(s));
+  if(/\bmo\b|mesio\s+oclusal/.test(t))['m','o'].forEach(s=>!surfaces.includes(s)&&surfaces.push(s));
+  if(/\bod\b|ocluso?\s+distal/.test(t))['o','d'].forEach(s=>!surfaces.includes(s)&&surfaces.push(s));
+
+  return{ok:true,tooth,condition:hit.condition,surfaces,treatment:extractTreatment(segment),raw:segment};
+}
+
+function parseDictation(text){
+  const cleaned=canonicalizeToothNumbers(String(text).replace(/\n/g,' '));
+  if(!cleaned)return[];
+
+  // Marca el inicio de cada pieza para poder dictar varias en una sola toma.
+  let marked=cleaned.replace(/\b(?:pieza|diente)\s*(\d{2})\b/gi,'§pieza $1');
+  marked=marked.replace(/([,.;]\s*)(?=\d{2}\b)/g,'$1§pieza ');
+
+  // Si el usuario inicia directamente con “16 caries...”.
+  if(!marked.includes('§')&&/^\d{2}\b/.test(marked))marked='§pieza '+marked;
+
+  return marked.split('§')
+    .map(s=>s.replace(/^[,.;\s]+/,'').trim())
+    .filter(Boolean)
+    .map(parseSegment);
+}
+
+$('parseDictationBtn').onclick=()=>{
+  state.dictationParsed=parseDictation($('dictationText').value);
+  renderDictationPreview();
+};
+
+function renderDictationPreview(){
+  const box=$('dictationPreview');
+  box.innerHTML='';
+  if(!state.dictationParsed.length){
+    box.innerHTML='<div class="dictation-item error">No encontré comandos clínicos. Prueba: “Pieza uno seis, caries oclusal y distal”.</div>';
+    $('applyDictationBtn').hidden=true;
+    return;
+  }
+  state.dictationParsed.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='dictation-item'+(r.ok?'':' error');
+    d.textContent=r.ok
+      ?`✓ Pieza ${r.tooth} · ${conditionDefs[r.condition].label}${r.surfaces.length?' · '+r.surfaces.map(s=>surfaceLabels[s]).join(' + '):''}${r.treatment?' · Manejo: '+r.treatment:''}`
+      :`⚠ ${r.error}`;
+    box.appendChild(d);
+  });
+  $('applyDictationBtn').hidden=!state.dictationParsed.some(x=>x.ok);
+}
+
+$('applyDictationBtn').onclick=async()=>{
+  const p=getPatient();
+  if(!p){toast('Selecciona un paciente antes de aplicar el dictado.');navigate('patients');return}
+  ensurePatientData(p);
+  const bucket=p.chart[state.dentition];
+
+  state.dictationParsed.filter(r=>r.ok).forEach(r=>{
+    const now=new Date().toISOString();
+    if(r.condition==='healthy'){
+      bucket[r.tooth]={records:[{id:uid(),condition:'healthy',surfaces:[],note:'',createdAt:now,source:'dictation'}]};
+    }else{
+      const existing=bucket[r.tooth]?.records||[];
+      bucket[r.tooth]={records:[...existing.filter(x=>x.condition!=='healthy'),{
+        id:uid(),condition:r.condition,surfaces:r.surfaces,note:'',createdAt:now,source:'dictation'
+      }]};
+    }
+
+    // Si se dicta manejo/tratamiento, también lo guarda en Exploración.
+    if(r.treatment){
+      const expBucket=p.exploration[state.dentition];
+      const prev=expBucket[r.tooth]||{};
+      const previousSuggested=(prev.suggested||'').trim();
+      const suggested=previousSuggested && !previousSuggested.toLowerCase().includes(r.treatment.toLowerCase())
+        ?`${previousSuggested}; ${r.treatment}`
+        :(previousSuggested||r.treatment);
+      expBucket[r.tooth]={...prev,suggested,updatedAt:now};
+    }
+
+    addHistory(p,{
+      dentition:state.dentition,
+      tooth:r.tooth,
+      summary:`Dictado: ${conditionDefs[r.condition].label}${r.surfaces.length?' · '+r.surfaces.map(s=>surfaceLabels[s]).join(', '):''}${r.treatment?' · Manejo: '+r.treatment:''}`
+    });
+  });
+
+  await savePatientRecord(p);
+  toast('Dictado aplicado');
+  navigate('chart');
+};
+
+$('clearDictationBtn').onclick=()=>{
+  $('dictationText').value='';
+  state.dictationParsed=[];
+  $('dictationPreview').innerHTML='';
+  $('applyDictationBtn').hidden=true;
+};
+
+function speechTranscriptScore(text){
+  const t=canonicalizeToothNumbers(text);
+  let score=0;
+  if(/\b(?:pieza|diente)\s*\d{2}\b/.test(t))score+=8;
+  if(/\b\d{2}\b/.test(t))score+=3;
+  dentalConditionAliases.forEach(x=>{if(includesAny(t,x.aliases))score+=4});
+  Object.values(dentalSurfaceAliases).forEach(x=>{if(includesAny(t,x))score+=2});
+  if(/tratamiento|manejo|plan/.test(t))score+=2;
+  return score;
+}
+
+function bestSpeechAlternative(result){
+  let best=result[0]?.transcript||'';
+  let bestScore=speechTranscriptScore(best);
+  for(let i=1;i<result.length;i++){
+    const candidate=result[i]?.transcript||'';
+    const score=speechTranscriptScore(candidate);
+    if(score>bestScore){best=candidate;bestScore=score}
+  }
+  return best;
+}
+
+function setupSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    $('micState').textContent='Usa el dictado del teclado';
+    $('micBtn').onclick=()=>{$('dictationText').focus();toast('En este navegador usa el micrófono del teclado.')};
+    return;
+  }
+
+  const rec=new SR();
+  rec.lang='es-MX';
+  rec.continuous=true;
+  rec.interimResults=true;
+  rec.maxAlternatives=5;
+
+  let listening=false;
+  let manualStop=false;
+  let committed='';
+
+  const updatePreview=text=>{
+    $('dictationText').value=text.trim();
+    state.dictationParsed=parseDictation($('dictationText').value);
+    renderDictationPreview();
+  };
+
+  rec.onstart=()=>{
+    listening=true;
+    $('micBtn').classList.add('listening');
+    $('micState').textContent='Escuchando… toca para detener';
+  };
+
+  rec.onresult=e=>{
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const text=bestSpeechAlternative(e.results[i]).trim();
+      if(!text)continue;
+      if(e.results[i].isFinal)committed=(committed+' '+text).trim();
+      else interim=(interim+' '+text).trim();
+    }
+    updatePreview((committed+' '+interim).trim());
+    $('micState').textContent=interim?'Interpretando…':'Escuchando… toca para detener';
+  };
+
+  rec.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='audio-capture'){
+      listening=false;
+      manualStop=true;
+    }
+    if(e.error==='no-speech'){
+      listening=false;
+      manualStop=true;
+      $('micState').textContent='No detecté voz · toca para intentar otra vez';
+      return;
+    }
+    if(e.error!=='aborted')toast(`Dictado: ${e.error}`);
+  };
+
+  rec.onend=()=>{
+    $('micBtn').classList.remove('listening');
+    if(listening&&!manualStop){
+      // En Android el servicio puede cortar después de una pausa; lo reabre.
+      setTimeout(()=>{try{rec.start()}catch{}},250);
+      return;
+    }
+    listening=false;
+    $('micState').textContent='Toca para dictar';
+  };
+
+  $('micBtn').onclick=()=>{
+    if(listening){
+      manualStop=true;
+      listening=false;
+      try{rec.stop()}catch{}
+      return;
+    }
+
+    manualStop=false;
+    committed=$('dictationText').value.trim();
+    try{rec.start()}catch{
+      toast('El micrófono ya está iniciándose.');
+    }
+  };
+}
 function renderHistory(){const box=$('historyList'),p=getPatient();box.innerHTML='';if(!p){box.innerHTML='<div class="empty-card">Selecciona un paciente para revisar su historial.</div>';return}const h=[...(ensurePatientData(p).chart.history||[])].sort((a,b)=>b.date.localeCompare(a.date));if(!h.length){box.innerHTML='<div class="empty-card">Todavía no hay cambios registrados en este expediente.</div>';return}h.forEach(x=>{const d=document.createElement('div');d.className='history-card';d.innerHTML=`<b>${new Date(x.date).toLocaleString('es-MX')}</b><small>${x.tooth?'Pieza '+x.tooth+' · ':''}${escapeHtml(x.summary||'Actualización')}</small>`;box.appendChild(d)})}
 $('printReportBtn').onclick=()=>{if(!getPatient()){toast('Selecciona un paciente.');return}navigate('chart');setTimeout(()=>window.print(),250)};
 $('exportJsonBtn').onclick=()=>{const p=getPatient();if(!p){toast('Selecciona un paciente.');return}const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`goldent-${(p.record||p.name).replace(/[^a-z0-9]+/gi,'-').toLowerCase()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};
