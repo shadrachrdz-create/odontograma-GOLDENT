@@ -1,4 +1,4 @@
-const CACHE = 'goldent-odontograma-v2-2-r8';
+const CACHE = 'goldent-odontograma-v2-2-r9';
 const ROOT = new URL('./', self.location.href);
 const FILES = [
   './', './index.html', './styles.css', './app.js', './speech-fix.js',
@@ -26,7 +26,6 @@ self.addEventListener('activate', event => {
 
     await self.clients.claim();
 
-    // Reload open GOLDENT windows once so the new microphone layer takes effect immediately.
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     await Promise.all(clients.map(client => {
       try { return client.navigate(client.url); } catch { return null; }
@@ -47,7 +46,6 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
 
-    // app.js is served together with the voice layer. The UI remains unchanged.
     if (url.pathname.endsWith('/app.js')) {
       try {
         const [appResponse, patchResponse] = await Promise.all([
