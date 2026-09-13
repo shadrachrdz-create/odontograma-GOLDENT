@@ -1,7 +1,7 @@
-const CACHE = 'goldent-odontograma-v2-2-r6';
+const CACHE = 'goldent-odontograma-v2-2-r7';
 const ROOT = new URL('./', self.location.href);
 const FILES = [
-  './', './index.html', './styles.css', './app.js',
+  './', './index.html', './styles.css', './app.js', './speech-fix.js',
   './manifest.webmanifest', './goldent-logo.png', './goldent-logo.svg'
 ];
 
@@ -38,6 +38,29 @@ self.addEventListener('fetch', event => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
+
+    // app.js is served together with the small microphone stability patch.
+    // This lets us fix voice behavior without changing the approved UI.
+    if (url.pathname.endsWith('/app.js')) {
+      try {
+        const [appResponse, patchResponse] = await Promise.all([
+          fetch(request, { cache: 'no-store' }),
+          fetch(new URL('./speech-fix.js', ROOT).href, { cache: 'no-store' })
+        ]);
+        if (!appResponse.ok || !patchResponse.ok) throw new Error('Voice patch unavailable');
+        const combined = `${await appResponse.text()}\n\n${await patchResponse.text()}\n`;
+        const response = new Response(combined, {
+          status: 200,
+          headers: { 'Content-Type': 'application/javascript; charset=utf-8' }
+        });
+        await cache.put(request, response.clone()).catch(() => {});
+        return response;
+      } catch {
+        const saved = await cache.match(request);
+        if (saved) return saved;
+      }
+    }
+
     try {
       const response = await fetch(request, { cache: 'no-store' });
       if (!response.ok) throw new Error('Descarga no disponible');
