@@ -1,4 +1,4 @@
-const CACHE = 'goldent-odontograma-v2-1-r5';
+const CACHE = 'goldent-odontograma-v2-2-r6';
 const ROOT = new URL('./', self.location.href);
 const FILES = [
   './', './index.html', './styles.css', './app.js',
